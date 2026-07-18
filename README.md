@@ -94,10 +94,11 @@ placed in the QR fragment and required during the WebSocket upgrade. It is a con
 for trusted local networks, not strong authentication. HTTP responses use a strict content-security
 policy and no state-changing HTTP endpoints are exposed. Do not port-forward or publicly host it.
 
-Browsers only grant microphone access in a secure context. Local recording activates on localhost
-or a trusted HTTPS origin; recorded audio never leaves the device in this release. On plain LAN
-HTTP, the real Codex provider explains that microphone access is unavailable instead of sending a
-fake message. Only the explicit MockAdapter development mode simulates a voice note.
+Voice uses the browser's speech-recognition service when it is available. On plain LAN HTTP, where
+browsers usually block direct microphone capture, Voice opens and focuses a dictation composer so
+the phone's keyboard microphone can supply editable text. AgentDeck sends only the reviewed text to
+the provider; it never uploads a recording to the desktop host. Browser and operating-system
+dictation services may have their own network and privacy behavior.
 
 ## Packaging
 

@@ -69,6 +69,8 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
   const [bindingOpen, setBindingOpen] = useState(false);
   const [bindingSlot, setBindingSlot] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [composerMode, setComposerMode] = useState<'text' | 'voice'>('text');
+  const [voiceGuidance, setVoiceGuidance] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [reasoningGesture, setReasoningGesture] = useState<ReasoningGesture | null>(null);
@@ -116,24 +118,28 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
   const previewLevel =
     REASONING_LEVELS[reasoningGesture?.previewIndex ?? reasoningIndex] ?? reasoningLevel;
 
-  const run = async (label: string, action: () => Promise<void>): Promise<void> => {
+  const run = async (label: string, action: () => Promise<void>): Promise<boolean> => {
     try {
       await action();
       setFeedback(label);
       haptic([8, 18, 12]);
+      return true;
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'The command failed');
+      return false;
     }
   };
 
   const sendDirection = async (text: string): Promise<void> => {
     const clean = text.trim();
     if (!selectedAgent || !clean) return;
-    await run('Direction sent', () =>
+    const sent = await run('Direction sent', () =>
       actions.sendMessage(selectedAgent.id, clean, { reasoningEffort: reasoningLevel }),
     );
+    if (!sent) return;
     setMessage('');
     setComposerOpen(false);
+    setVoiceGuidance(null);
   };
 
   const submitDirection = (event: FormEvent): void => {
@@ -141,12 +147,19 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
     void sendDirection(message);
   };
 
-  const voice = useVoiceInput((transcript) => {
-    if (selectedAgent)
-      void run('Voice direction sent', () =>
-        actions.sendMessage(selectedAgent.id, transcript, { reasoningEffort: reasoningLevel }),
-      );
-  });
+  const voice = useVoiceInput(
+    (transcript) => {
+      setMessage((current) => [current.trim(), transcript].filter(Boolean).join(' '));
+      setComposerMode('voice');
+      setComposerOpen(true);
+      setVoiceGuidance('Voice captured. Review the direction, then send it.');
+    },
+    (guidance) => {
+      setComposerMode('voice');
+      setComposerOpen(true);
+      setVoiceGuidance(guidance);
+    },
+  );
 
   const openBinding = (slot = Math.max(0, selectedSlot)): void => {
     setBindingSlot(slot);
@@ -328,18 +341,15 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
                 active={voice.listening}
                 disabled={!selectedAgent}
                 onTrigger={() => {
-                  if (voice.start() || !selectedAgent) return;
-                  if (snapshot.providerName === 'Mock') {
-                    void run('Voice note sent (mock)', () =>
-                      actions.sendMessage(
-                        selectedAgent.id,
-                        'Voice direction (simulated by the local mock provider).',
-                        { reasoningEffort: reasoningLevel },
-                      ),
-                    );
-                  } else {
-                    setFeedback('Voice needs HTTPS or localhost microphone access');
-                  }
+                  if (!selectedAgent) return;
+                  setComposerMode('voice');
+                  setComposerOpen(true);
+                  setVoiceGuidance(
+                    voice.supported
+                      ? 'Listening now. Speak one concise direction.'
+                      : 'Use the microphone on your keyboard, then review the direction.',
+                  );
+                  voice.start();
                 }}
               />
             ) : null}
@@ -350,7 +360,11 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
                 code="06"
                 tone="bone"
                 disabled={!selectedAgent}
-                onTrigger={() => setComposerOpen(true)}
+                onTrigger={() => {
+                  setComposerMode('text');
+                  setVoiceGuidance(null);
+                  setComposerOpen(true);
+                }}
               />
             ) : null}
             <ConsoleButton
@@ -471,24 +485,61 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
             >
               <div className="sheet-header">
                 <div>
-                  <span className="eyebrow">DIRECTION TO {selectedAgent.name}</span>
-                  <h2>Send a message</h2>
+                  <span className="eyebrow">
+                    {composerMode === 'voice' ? 'VOICE' : 'DIRECTION'} TO {selectedAgent.name}
+                  </span>
+                  <h2>
+                    {composerMode === 'voice'
+                      ? voice.listening
+                        ? 'Listening…'
+                        : 'Dictate a direction'
+                      : 'Send a message'}
+                  </h2>
                 </div>
                 <button
                   type="button"
                   className="icon-button"
-                  onClick={() => setComposerOpen(false)}
+                  onClick={() => {
+                    voice.stop();
+                    setComposerOpen(false);
+                    setVoiceGuidance(null);
+                  }}
+                  aria-label="Close direction composer"
                 >
                   <X />
                 </button>
               </div>
+              {composerMode === 'voice' ? (
+                <div
+                  className={`voice-guidance ${voice.listening ? 'is-listening' : ''}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Mic />
+                  <span>
+                    <strong>{voice.listening ? 'Listening' : 'Phone dictation is ready'}</strong>
+                    <small>
+                      {voiceGuidance ??
+                        'Tap the microphone on your keyboard, then review the direction.'}
+                    </small>
+                  </span>
+                </div>
+              ) : null}
               <div className="composer-input">
                 <MessageSquareText />
                 <textarea
                   autoFocus
+                  aria-label="Direction"
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
-                  placeholder="Give concise direction…"
+                  placeholder={
+                    composerMode === 'voice'
+                      ? 'Your dictated direction appears here…'
+                      : 'Give concise direction…'
+                  }
+                  enterKeyHint="send"
+                  autoCapitalize="sentences"
+                  spellCheck
                   maxLength={4000}
                   rows={3}
                 />

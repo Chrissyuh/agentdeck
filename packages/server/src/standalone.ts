@@ -9,7 +9,14 @@ const dashboardPath = process.env.AGENTDECK_DASHBOARD_PATH
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../apps/dashboard/dist');
 
 const provider = await createAgentProvider();
-const server = await createAgentDeckServer({ port: portValue, dashboardPath, provider });
+const server = await createAgentDeckServer({
+  port: portValue,
+  dashboardPath,
+  provider,
+  ...(process.env.AGENTDECK_PAIRING_CODE
+    ? { pairingCode: process.env.AGENTDECK_PAIRING_CODE }
+    : {}),
+});
 
 process.stdout.write(
   `${JSON.stringify({

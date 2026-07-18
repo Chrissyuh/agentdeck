@@ -196,61 +196,129 @@ export function useMountedDisplay(
   return { enabled, toggle };
 }
 
-export function useVoiceInput(onTranscript: (transcript: string) => void) {
+interface SpeechRecognitionResultEvent extends Event {
+  results: ArrayLike<{
+    isFinal: boolean;
+    0?: { transcript?: string };
+  }>;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error?: string;
+}
+
+interface BrowserSpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+}
+
+type SpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+function speechRecognitionConstructor(): SpeechRecognitionConstructor | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const speechWindow = window as typeof window & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+}
+
+function voiceErrorMessage(error: string | undefined): string {
+  switch (error) {
+    case 'no-speech':
+      return "I didn't catch that. Try again or use the microphone on your keyboard.";
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return 'Microphone access is blocked here. Use the microphone on your keyboard.';
+    case 'audio-capture':
+      return 'No microphone is available. You can still type the direction.';
+    default:
+      return 'Speech recognition is unavailable. Use the microphone on your keyboard.';
+  }
+}
+
+export function useVoiceInput(
+  onTranscript: (transcript: string) => void,
+  onUnavailable: (message: string) => void,
+) {
   const [listening, setListening] = useState(false);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const startedAt = useRef(0);
-  const disposed = useRef(false);
-  const [supported] = useState(() =>
-    Boolean(
-      typeof window !== 'undefined' &&
-      typeof navigator.mediaDevices?.getUserMedia === 'function' &&
-      typeof MediaRecorder !== 'undefined',
-    ),
-  );
+  const recognition = useRef<BrowserSpeechRecognition | null>(null);
+  const transcriptCallback = useRef(onTranscript);
+  const unavailableCallback = useRef(onUnavailable);
+  transcriptCallback.current = onTranscript;
+  unavailableCallback.current = onUnavailable;
+  const [supported] = useState(() => Boolean(speechRecognitionConstructor()));
 
   const start = useCallback(() => {
-    if (recorder.current?.state === 'recording') {
-      recorder.current.stop();
+    if (recognition.current) {
+      recognition.current.stop();
       return true;
     }
-    if (!supported) return false;
-    void navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        const nextRecorder = new MediaRecorder(stream);
-        recorder.current = nextRecorder;
-        startedAt.current = Date.now();
-        nextRecorder.onstop = () => {
-          const seconds = Math.max(0.1, (Date.now() - startedAt.current) / 1_000);
-          stream.getTracks().forEach((track) => track.stop());
-          recorder.current = null;
-          if (!disposed.current) {
-            setListening(false);
-            onTranscript(`Voice note · ${seconds.toFixed(1)}s (local mock)`);
-            haptic([8, 18, 12]);
-          }
-        };
-        nextRecorder.onerror = () => {
-          stream.getTracks().forEach((track) => track.stop());
-          recorder.current = null;
-          setListening(false);
-        };
-        nextRecorder.start();
-        setListening(true);
-        haptic(8);
-      })
-      .catch(() => setListening(false));
+    const Recognition = speechRecognitionConstructor();
+    if (!Recognition) {
+      unavailableCallback.current(voiceErrorMessage(undefined));
+      return false;
+    }
+
+    const nextRecognition = new Recognition();
+    recognition.current = nextRecognition;
+    nextRecognition.continuous = false;
+    nextRecognition.interimResults = false;
+    nextRecognition.lang = document.documentElement.lang || navigator.language || 'en-US';
+    nextRecognition.maxAlternatives = 1;
+    nextRecognition.onstart = () => {
+      setListening(true);
+      haptic(8);
+    };
+    nextRecognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .filter((result) => result.isFinal)
+        .map((result) => result[0]?.transcript?.trim())
+        .filter((value): value is string => Boolean(value))
+        .join(' ');
+      if (transcript) {
+        transcriptCallback.current(transcript);
+        haptic([8, 18, 12]);
+      }
+    };
+    nextRecognition.onerror = (event) => {
+      unavailableCallback.current(voiceErrorMessage(event.error));
+    };
+    nextRecognition.onend = () => {
+      recognition.current = null;
+      setListening(false);
+    };
+
+    try {
+      nextRecognition.start();
+    } catch {
+      recognition.current = null;
+      setListening(false);
+      unavailableCallback.current(voiceErrorMessage(undefined));
+      return false;
+    }
     return true;
-  }, [onTranscript, supported]);
+  }, []);
+
+  const stop = useCallback(() => {
+    recognition.current?.stop();
+  }, []);
 
   useEffect(() => {
-    disposed.current = false;
     return () => {
-      disposed.current = true;
-      if (recorder.current?.state === 'recording') recorder.current.stop();
+      recognition.current?.abort();
+      recognition.current = null;
     };
   }, []);
 
-  return { listening, supported, start };
+  return { listening, supported, start, stop };
 }

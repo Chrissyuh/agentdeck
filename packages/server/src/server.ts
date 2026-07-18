@@ -25,6 +25,7 @@ export interface AgentDeckServerOptions {
   host?: string;
   port?: number;
   dashboardPath?: string;
+  pairingCode?: string;
   provider?: AgentProvider;
 }
 
@@ -40,6 +41,29 @@ export interface RunningAgentDeckServer {
 }
 
 const DEFAULT_PORT = 4317;
+const LEGACY_SYNTHETIC_VOICE_MESSAGE = 'Voice direction (simulated by the local mock provider).';
+const MAX_PUBLIC_ERROR_LENGTH = 180;
+
+function rawErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error || 'Command failed');
+}
+
+function publicCommandError(error: unknown): string {
+  const raw = rawErrorMessage(error).replace(/\s+/g, ' ').trim();
+  const detail = raw.replace(/^Codex request failed(?: \(-?\d+\))?:\s*/i, '').trim();
+
+  if (/active turn|turn.+in progress|already.+working/i.test(detail)) {
+    return 'That task is already working. Wait for it to finish or tap Interrupt.';
+  }
+  if (/reasoning|effort/i.test(detail) && /invalid|unsupported|does not support/i.test(detail)) {
+    return 'That Codex model does not support the selected reasoning level.';
+  }
+  if (/thread|task/i.test(detail) && /not found|does not exist|missing/i.test(detail)) {
+    return 'That task is no longer available. Map another task to this key.';
+  }
+  if (detail.length <= MAX_PUBLIC_ERROR_LENGTH) return detail || 'The command failed.';
+  return `${detail.slice(0, MAX_PUBLIC_ERROR_LENGTH - 1).trimEnd()}…`;
+}
 
 function getLanAddress(): string {
   const candidates = Object.entries(networkInterfaces())
@@ -67,7 +91,8 @@ export async function createAgentDeckServer(
 ): Promise<RunningAgentDeckServer> {
   const host = options.host ?? '0.0.0.0';
   const desiredPort = options.port ?? DEFAULT_PORT;
-  const token = randomInt(0, 10_000).toString().padStart(4, '0');
+  const token = options.pairingCode ?? randomInt(0, 10_000).toString().padStart(4, '0');
+  if (!/^\d{4}$/.test(token)) throw new Error('AgentDeck pairing codes must contain four digits');
   const serverId = randomUUID();
   const provider = options.provider ?? new MockAdapter();
   let revision = 1;
@@ -77,6 +102,10 @@ export async function createAgentDeckServer(
   app.use((_request, response, next) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
+    response.setHeader(
+      'Permissions-Policy',
+      'microphone=(self), on-device-speech-recognition=(self)',
+    );
     response.setHeader(
       'Content-Security-Policy',
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; font-src 'self'; frame-ancestors 'none'",
@@ -93,8 +122,25 @@ export async function createAgentDeckServer(
     : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../apps/dashboard/dist');
 
   if (existsSync(path.join(dashboardPath, 'index.html'))) {
-    app.use(express.static(dashboardPath, { index: false, maxAge: '1h' }));
-    app.get('*', (_request, response) => response.sendFile(path.join(dashboardPath, 'index.html')));
+    app.use(
+      express.static(dashboardPath, {
+        index: false,
+        setHeaders(response, filePath) {
+          const normalizedPath = filePath.replace(/\\/g, '/');
+          if (normalizedPath.endsWith('/index.html')) {
+            response.setHeader('Cache-Control', 'no-store, max-age=0');
+          } else if (normalizedPath.includes('/assets/')) {
+            response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          } else {
+            response.setHeader('Cache-Control', 'no-cache');
+          }
+        },
+      }),
+    );
+    app.get('*', (_request, response) => {
+      response.setHeader('Cache-Control', 'no-store, max-age=0');
+      response.sendFile(path.join(dashboardPath, 'index.html'));
+    });
   } else {
     app.get('/', (_request, response) => {
       response.status(503).type('text/plain').send('AgentDeck dashboard has not been built yet.');
@@ -183,6 +229,14 @@ export async function createAgentDeckServer(
           await provider.interrupt(message.agentId);
           break;
         case 'send_message':
+          if (
+            provider.name !== 'Mock' &&
+            message.message.trim() === LEGACY_SYNTHETIC_VOICE_MESSAGE
+          ) {
+            throw new Error(
+              'Blocked a stale mock voice command. Reload AgentDeck before using Voice.',
+            );
+          }
           await provider.sendMessage(message.agentId, message.message, {
             ...(message.reasoningEffort ? { reasoningEffort: message.reasoningEffort } : {}),
           });
@@ -195,13 +249,19 @@ export async function createAgentDeckServer(
         encodeMessage({ type: 'command_result', requestId: message.requestId, ok: true }),
       );
     } catch (error) {
-      const detail = error instanceof Error ? error.message : 'Command failed';
+      const rawError = rawErrorMessage(error);
+      console.error('[AgentDeck] Provider command failed', {
+        provider: provider.name,
+        command: message.type,
+        requestId: message.requestId,
+        error: rawError.slice(0, 2_000),
+      });
       socket.send(
         encodeMessage({
           type: 'command_result',
           requestId: message.requestId,
           ok: false,
-          error: detail,
+          error: publicCommandError(error),
         }),
       );
     }
@@ -238,7 +298,11 @@ export async function createAgentDeckServer(
       .replace('localhost', localAddress)
       .replace('127.0.0.1', localAddress);
     const fragment = new URLSearchParams({ pair: token, server: serverOrigin });
-    return `${normalizedOrigin.replace(/\/$/, '')}/#${fragment.toString()}`;
+    const dashboardUrl = new URL(normalizedOrigin);
+    dashboardUrl.pathname = `${dashboardUrl.pathname.replace(/\/$/, '')}/`;
+    dashboardUrl.searchParams.set('v', serverId.slice(0, 8));
+    dashboardUrl.hash = fragment.toString();
+    return dashboardUrl.toString();
   };
 
   return {

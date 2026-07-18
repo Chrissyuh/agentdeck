@@ -17,6 +17,7 @@
   --subtle: #676a73;
   --accent: #d7ff45;
   --accent-contrast: #11140a;
+  --blue: #71c7ff;
   --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
   --radius-xl: 26px;
   --radius-lg: 20px;
@@ -2024,6 +2025,47 @@ input[type='range'] {
   line-height: 1.35;
 }
 
+.voice-guidance {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: -5px 0 16px;
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--line));
+  border-radius: 14px;
+  padding: 11px 13px;
+  background:
+    radial-gradient(
+      circle at 12% 50%,
+      color-mix(in srgb, var(--blue) 16%, transparent),
+      transparent 34%
+    ),
+    var(--surface-soft);
+}
+.voice-guidance > svg {
+  width: 24px;
+  min-width: 24px;
+  color: var(--blue);
+}
+.voice-guidance.is-listening > svg {
+  animation: statusPulse 1.15s ease-in-out infinite;
+}
+.voice-guidance span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.voice-guidance strong {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.voice-guidance small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .composer-input {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -2067,6 +2109,22 @@ input[type='range'] {
 }
 .composer-input button svg {
   width: 17px;
+}
+
+@media (max-height: 430px) {
+  .composer-sheet {
+    padding: 14px 16px;
+  }
+  .composer-sheet .sheet-header {
+    margin-bottom: 10px;
+  }
+  .voice-guidance {
+    margin: 0 0 10px;
+    padding: 8px 10px;
+  }
+  .composer-input textarea {
+    max-height: 82px;
+  }
 }
 
 /* Pairing */

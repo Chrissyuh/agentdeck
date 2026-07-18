@@ -24,6 +24,14 @@ export function App() {
   const [sleepCycle, setSleepCycle] = useState(0);
 
   useEffect(() => {
+    if (!snapshot.serverId) return;
+    const key = 'agentdeck.connected-server-id';
+    const previousServerId = window.sessionStorage.getItem(key);
+    window.sessionStorage.setItem(key, snapshot.serverId);
+    if (previousServerId && previousServerId !== snapshot.serverId) window.location.reload();
+  }, [snapshot.serverId]);
+
+  useEffect(() => {
     if (hasActiveAgent || snapshot.status !== 'connected') {
       setAmbientSleeping(false);
       return;
