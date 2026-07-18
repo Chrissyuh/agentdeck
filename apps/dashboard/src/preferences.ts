@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isReasoningLevel, type ReasoningLevel } from './reasoning';
 
-export type ControlKey =
-  'approve' | 'reject' | 'interrupt' | 'continue' | 'send' | 'voice' | 'reasoning';
+export type ControlKey = 'approve' | 'reject' | 'interrupt' | 'send' | 'voice' | 'reasoning';
 
 export interface Preferences {
   mountedMode: boolean;
@@ -15,7 +14,6 @@ const DEFAULT_CONTROLS: Record<ControlKey, boolean> = {
   approve: false,
   reject: false,
   interrupt: false,
-  continue: false,
   send: false,
   voice: false,
   reasoning: false,

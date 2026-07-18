@@ -178,7 +178,7 @@
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
@@ -211,6 +211,11 @@
   transition:
     filter 100ms ease,
     transform 80ms ease;
+  grid-column: span 2;
+}
+
+.console-button:nth-last-child(-n + 2) {
+  grid-column: span 3;
 }
 
 .console-button::after {

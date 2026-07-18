@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bolt,
@@ -7,11 +15,11 @@ import {
   Mic,
   MonitorUp,
   Pause,
-  Play,
   Plus,
   Send,
   SlidersHorizontal,
   Unlink,
+  MessageSquareText,
   X,
 } from 'lucide-react';
 import type { AgentDeckActions, AgentDeckSnapshot } from '@agentdeck/client';
@@ -30,7 +38,6 @@ interface HomeScreenProps {
   actions: AgentDeckActions;
   preferences: PreferencesController;
   mountedDisplay: { enabled: boolean; toggle(): Promise<void> };
-  onOpenAgent(agentId: string, compose?: boolean): void;
 }
 
 interface ReasoningGesture {
@@ -53,13 +60,7 @@ const SKILLS = [
   { name: 'Run verification', detail: 'Run the relevant checks and report every failure.' },
 ] as const;
 
-export function HomeScreen({
-  snapshot,
-  actions,
-  preferences,
-  mountedDisplay,
-  onOpenAgent,
-}: HomeScreenProps) {
+export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: HomeScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
@@ -67,6 +68,8 @@ export function HomeScreen({
   const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
   const [bindingOpen, setBindingOpen] = useState(false);
   const [bindingSlot, setBindingSlot] = useState(0);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [message, setMessage] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [reasoningGesture, setReasoningGesture] = useState<ReasoningGesture | null>(null);
   const reasoningPreview = useRef(0);
@@ -121,6 +124,19 @@ export function HomeScreen({
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'The command failed');
     }
+  };
+
+  const sendDirection = async (text: string): Promise<void> => {
+    const clean = text.trim();
+    if (!selectedAgent || !clean) return;
+    await run('Direction sent', () => actions.sendMessage(selectedAgent.id, clean));
+    setMessage('');
+    setComposerOpen(false);
+  };
+
+  const submitDirection = (event: FormEvent): void => {
+    event.preventDefault();
+    void sendDirection(message);
   };
 
   const voice = useVoiceInput((transcript) => {
@@ -228,7 +244,7 @@ export function HomeScreen({
       <div className="deck-shell">
         <section className="command-bay" aria-label="Command controls">
           {selectedAgent && statusMeta ? (
-            <button className="console-readout" onClick={() => onOpenAgent(selectedAgent.id)}>
+            <div className="console-readout">
               <span className="readout-project">{selectedAgent.projectName}</span>
               <span className="readout-key">KEY {String(selectedSlot + 1).padStart(2, '0')}</span>
               <span className="readout-status" style={{ color: statusMeta.color }}>
@@ -243,7 +259,7 @@ export function HomeScreen({
               </span>
               <time>{formatElapsed(selectedAgent.startedAt, now)}</time>
               {selectedAgent.pendingApproval ? <em>DECISION REQUIRED</em> : null}
-            </button>
+            </div>
           ) : (
             <button className="console-readout is-empty" onClick={() => openCreate(0)}>
               <span className="readout-project">NO CHAT SELECTED</span>
@@ -281,11 +297,14 @@ export function HomeScreen({
                 label="Reject"
                 code="03"
                 tone="red"
-                holdMs={720}
+                holdMs={2000}
                 disabled={!selectedAgent?.pendingApproval}
-                onTrigger={() =>
-                  selectedAgent && void run('Rejected', () => actions.reject(selectedAgent.id))
-                }
+                onTrigger={() => {
+                  if (!selectedAgent) return;
+                  void actions.reject(selectedAgent.id).catch((error: unknown) => {
+                    setFeedback(error instanceof Error ? error.message : 'The command failed');
+                  });
+                }}
               />
             ) : null}
             {!hidden.interrupt ? (
@@ -302,26 +321,11 @@ export function HomeScreen({
                 }
               />
             ) : null}
-            {!hidden.continue ? (
-              <ConsoleButton
-                icon={Play}
-                label="Continue"
-                code="05"
-                tone="violet"
-                disabled={!selectedAgent}
-                onTrigger={() =>
-                  selectedAgent &&
-                  void run('Continued', () =>
-                    actions.sendMessage(selectedAgent.id, 'Continue from where you stopped.'),
-                  )
-                }
-              />
-            ) : null}
             {!hidden.voice ? (
               <ConsoleButton
                 icon={Mic}
                 label={voice.listening ? 'Recording' : 'Voice'}
-                code="06"
+                code="05"
                 tone="blue"
                 active={voice.listening}
                 disabled={!selectedAgent}
@@ -340,16 +344,16 @@ export function HomeScreen({
               <ConsoleButton
                 icon={Send}
                 label="Send"
-                code="07"
+                code="06"
                 tone="bone"
                 disabled={!selectedAgent}
-                onTrigger={() => selectedAgent && onOpenAgent(selectedAgent.id, true)}
+                onTrigger={() => setComposerOpen(true)}
               />
             ) : null}
             <ConsoleButton
               icon={Plus}
               label="New chat"
-              code="08"
+              code="07"
               tone="dark"
               onTrigger={() => {
                 const emptySlot = slots.indexOf(null);
@@ -359,7 +363,7 @@ export function HomeScreen({
             <ConsoleButton
               icon={SlidersHorizontal}
               label="Deck"
-              code="09"
+              code="08"
               tone="dark"
               onTrigger={() => setDeckOpen(true)}
             />
@@ -440,6 +444,57 @@ export function HomeScreen({
             {feedback}
             <X />
           </motion.button>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {composerOpen && selectedAgent ? (
+          <motion.div
+            className="sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.form
+              className="bottom-sheet composer-sheet console-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Send direction to ${selectedAgent.name}`}
+              initial={{ y: '105%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '105%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+              onSubmit={submitDirection}
+            >
+              <div className="sheet-header">
+                <div>
+                  <span className="eyebrow">DIRECTION TO {selectedAgent.name}</span>
+                  <h2>Send a message</h2>
+                </div>
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => setComposerOpen(false)}
+                >
+                  <X />
+                </button>
+              </div>
+              <div className="composer-input">
+                <MessageSquareText />
+                <textarea
+                  autoFocus
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  placeholder="Give concise direction…"
+                  maxLength={4000}
+                  rows={3}
+                />
+                <button type="submit" disabled={!message.trim()}>
+                  <Send /> Send
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
         ) : null}
       </AnimatePresence>
 

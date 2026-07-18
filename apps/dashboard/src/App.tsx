@@ -4,7 +4,6 @@ import { useAgentDeck } from '@agentdeck/client';
 import { usePreferences } from './preferences';
 import { useChatUpdateFeedback, useMountedDisplay } from './hooks';
 import { HomeScreen } from './screens/HomeScreen';
-import { AgentScreen } from './screens/AgentScreen';
 import { PairingScreen } from './screens/PairingScreen';
 import { ConnectionRecoveryScreen } from './screens/ConnectionRecoveryScreen';
 import { AmbientScreen } from './screens/AmbientScreen';
@@ -21,15 +20,8 @@ export function App() {
     hasActiveAgent,
     (mountedMode) => preferences.patch({ mountedMode }),
   );
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [composeOnOpen, setComposeOnOpen] = useState(false);
   const [ambientSleeping, setAmbientSleeping] = useState(false);
   const [sleepCycle, setSleepCycle] = useState(0);
-  const selectedAgent = snapshot.agents.find((agent) => agent.id === selectedAgentId);
-
-  useEffect(() => {
-    if (selectedAgentId && snapshot.agents.length > 0 && !selectedAgent) setSelectedAgentId(null);
-  }, [selectedAgent, selectedAgentId, snapshot.agents.length]);
 
   useEffect(() => {
     if (hasActiveAgent || snapshot.status !== 'connected') {
@@ -58,31 +50,13 @@ export function App() {
 
   return (
     <AnimatePresence mode="wait" initial={false}>
-      {selectedAgent ? (
-        <AgentScreen
-          key={selectedAgent.id}
-          agent={selectedAgent}
-          actions={actions}
-          preferences={preferences}
-          initialComposerOpen={composeOnOpen}
-          onBack={() => {
-            setSelectedAgentId(null);
-            setComposeOnOpen(false);
-          }}
-        />
-      ) : (
-        <HomeScreen
-          key="home"
-          snapshot={snapshot}
-          actions={actions}
-          preferences={preferences}
-          mountedDisplay={mountedDisplay}
-          onOpenAgent={(agentId, compose = false) => {
-            setComposeOnOpen(compose);
-            setSelectedAgentId(agentId);
-          }}
-        />
-      )}
+      <HomeScreen
+        key="home"
+        snapshot={snapshot}
+        actions={actions}
+        preferences={preferences}
+        mountedDisplay={mountedDisplay}
+      />
     </AnimatePresence>
   );
 }
