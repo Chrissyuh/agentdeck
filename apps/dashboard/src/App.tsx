@@ -20,6 +20,7 @@ export function App() {
     (mountedMode) => preferences.patch({ mountedMode }),
   );
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [composeOnOpen, setComposeOnOpen] = useState(false);
   const [ambientSleeping, setAmbientSleeping] = useState(false);
   const [sleepCycle, setSleepCycle] = useState(0);
   const selectedAgent = snapshot.agents.find((agent) => agent.id === selectedAgentId);
@@ -56,10 +57,13 @@ export function App() {
         <AgentScreen
           key={selectedAgent.id}
           agent={selectedAgent}
-          snapshot={snapshot}
           actions={actions}
           preferences={preferences}
-          onBack={() => setSelectedAgentId(null)}
+          initialComposerOpen={composeOnOpen}
+          onBack={() => {
+            setSelectedAgentId(null);
+            setComposeOnOpen(false);
+          }}
         />
       ) : (
         <HomeScreen
@@ -68,7 +72,10 @@ export function App() {
           actions={actions}
           preferences={preferences}
           mountedDisplay={mountedDisplay}
-          onOpenAgent={setSelectedAgentId}
+          onOpenAgent={(agentId, compose = false) => {
+            setComposeOnOpen(compose);
+            setSelectedAgentId(agentId);
+          }}
         />
       )}
     </AnimatePresence>

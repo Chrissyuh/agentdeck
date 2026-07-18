@@ -15,25 +15,32 @@ import {
   X,
 } from 'lucide-react';
 import type { Agent } from '@agentdeck/protocol';
-import type { AgentDeckActions, AgentDeckSnapshot } from '@agentdeck/client';
+import type { AgentDeckActions } from '@agentdeck/client';
 import { formatElapsed, shortTime, STATUS_META } from '@agentdeck/shared';
 import type { PreferencesController } from '../preferences';
+import { REASONING_LEVELS, REASONING_META } from '../reasoning';
 import { haptic, useClock, useVoiceInput } from '../hooks';
-import { ConnectionBadge, HoldButton, StatusOrb, TactileButton } from '../components/controls';
+import { HoldButton, StatusOrb, TactileButton } from '../components/controls';
 
 interface AgentScreenProps {
   agent: Agent;
-  snapshot: AgentDeckSnapshot;
   actions: AgentDeckActions;
   preferences: PreferencesController;
+  initialComposerOpen?: boolean;
   onBack: () => void;
 }
 
-export function AgentScreen({ agent, snapshot, actions, preferences, onBack }: AgentScreenProps) {
+export function AgentScreen({
+  agent,
+  actions,
+  preferences,
+  initialComposerOpen = false,
+  onBack,
+}: AgentScreenProps) {
   const [message, setMessage] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [reasoningOpen, setReasoningOpen] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(initialComposerOpen);
   const now = useClock();
   const statusMeta = STATUS_META[agent.status];
   const hidden = preferences.preferences.hiddenControls;
@@ -85,29 +92,20 @@ export function AgentScreen({ agent, snapshot, actions, preferences, onBack }: A
         } as React.CSSProperties
       }
     >
-      <header className="agent-header">
-        <button className="back-button" onClick={onBack} aria-label="Back to agents">
-          <ArrowLeft />
-        </button>
-        <div className="agent-title-block">
-          <StatusOrb status={agent.status} />
-          <div>
-            <span>{agent.projectName}</span>
-            <h1>{agent.name}</h1>
-          </div>
-        </div>
-        <div className="agent-header-meta">
-          <div className="header-runtime">
-            <span>Runtime</span>
-            <strong>{formatElapsed(agent.startedAt, now)}</strong>
-          </div>
-          <ConnectionBadge status={snapshot.status} latency={snapshot.latencyMs} />
-        </div>
-      </header>
-
       <div className="agent-workspace">
         <section className="operation-column">
           <div className="operation-panel">
+            <div className="detail-context-strip">
+              <button onClick={onBack} aria-label="Back to chat keys">
+                <ArrowLeft />
+              </button>
+              <StatusOrb status={agent.status} />
+              <span>
+                <small>{agent.projectName}</small>
+                <strong>{agent.name}</strong>
+              </span>
+              <time>{formatElapsed(agent.startedAt, now)}</time>
+            </div>
             <span className="panel-kicker">Current operation</span>
             <div className="operation-title">
               {STATUS_META[agent.status].active ? (
@@ -347,7 +345,7 @@ export function AgentScreen({ agent, snapshot, actions, preferences, onBack }: A
             >
               <div className="sheet-header">
                 <div>
-                  <span className="eyebrow">Agent direction</span>
+                  <span className="eyebrow">CHAT REASONING</span>
                   <h2>Reasoning effort</h2>
                 </div>
                 <button className="icon-button" onClick={() => setReasoningOpen(false)}>
@@ -355,24 +353,24 @@ export function AgentScreen({ agent, snapshot, actions, preferences, onBack }: A
                 </button>
               </div>
               <div className="reasoning-options">
-                {[
-                  ['Quick', 'Optimize for speed and short answers.'],
-                  ['Standard', 'Balance depth, speed, and tool use.'],
-                  ['Deep', 'Think through complex tradeoffs carefully.'],
-                ].map(([label, detail]) => (
+                {REASONING_LEVELS.map((level) => (
                   <button
-                    key={label}
+                    key={level}
                     onClick={() => {
-                      void sendDirection(
-                        `Use ${label?.toLowerCase()} reasoning effort for the next operation.`,
-                      );
+                      preferences.patch({
+                        reasoningByAgent: {
+                          ...preferences.preferences.reasoningByAgent,
+                          [agent.id]: level,
+                        },
+                      });
+                      void sendDirection(`Use ${level} reasoning effort for the next operation.`);
                       setReasoningOpen(false);
                     }}
                   >
                     <BrainCircuit />
                     <span>
-                      <strong>{label}</strong>
-                      <small>{detail}</small>
+                      <strong>{REASONING_META[level].label}</strong>
+                      <small>{REASONING_META[level].detail}</small>
                     </span>
                     <ChevronRight />
                   </button>

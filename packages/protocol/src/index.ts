@@ -34,6 +34,7 @@ export type PendingApproval = z.infer<typeof pendingApprovalSchema>;
 
 export const agentSchema = z.object({
   id: z.string().min(1),
+  /** Provider-normalized thread title or custom agent display name. */
   name: z.string().min(1),
   projectName: z.string().min(1),
   status: agentStatusSchema,

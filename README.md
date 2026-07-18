@@ -10,7 +10,7 @@ AgentDeck is an independent project. It is not affiliated with or endorsed by Op
 ![AgentDeck running in a 667 by 375 phone-sized landscape viewport](docs/agentdeck-phone.png)
 
 The interaction model is inspired by the official [Codex Micro concept](https://openai.com/supply/co-lab/work-louder/):
-six glanceable agent keys, instant workflow launchers, dedicated command controls, push-to-talk,
+six glanceable chat keys, instant workflow launchers, dedicated command controls, push-to-talk,
 and adjustable reasoning effort. AgentDeck translates those ideas into software that existing
 touchscreen hardware can run.
 
@@ -20,13 +20,13 @@ touchscreen hardware can run.
 
 ## What is included
 
-- Six illuminated Agent Keys modeled on the at-a-glance Codex Micro workflow
+- Six illuminated Chat Keys with an explicit chat-to-physical-button mapping workflow
 - Landscape-first, always-on surface for old iPhones, Android phones, and tablets
 - Tactile live status, elapsed time, event history, and approval state
-- Instant skill launcher, local push-to-talk capture where browser security permits it, and live reasoning control
+- Instant skill launcher, local push-to-talk capture where browser security permits it, and hold-drag reasoning control
 - Large approve, reject, interrupt, continue, send, voice, and reasoning controls
 - Hold-to-confirm gestures for dangerous actions and haptics where supported
-- Persistent layouts, card ordering, colors, density, icon sizing, themes, and control visibility
+- Persistent key bindings, chat-key layouts, colors, icon sizing, themes, and control visibility
 - Tokenized QR pairing, automatic reconnect, heartbeat, and offline detection
 - Fullscreen mounted mode with screen wake lock while work is active and ambient sleep when quiet
 - Authoritative local state in the desktop host

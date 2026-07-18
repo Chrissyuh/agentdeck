@@ -39,6 +39,7 @@ function event(kind: AgentEvent['kind'], title: string, detail?: string): AgentE
 }
 
 function seedAgent(
+  id: string,
   name: string,
   projectName: string,
   status: AgentStatus,
@@ -48,7 +49,7 @@ function seedAgent(
   const active = ['thinking', 'working', 'awaiting_approval'].includes(status);
   const approval = status === 'awaiting_approval';
   return {
-    id: randomUUID(),
+    id,
     name,
     projectName,
     status,
@@ -71,7 +72,7 @@ function seedAgent(
         }
       : null,
     events: [
-      event('system', 'Agent connected', `Attached to ${projectName}`),
+      event('system', 'Chat connected', `Attached to ${projectName}`),
       event(
         'status',
         status === 'awaiting_approval' ? 'Approval requested' : `Status changed to ${status}`,
@@ -87,10 +88,28 @@ export class MockAdapter implements AgentProvider {
 
   constructor(options: { autoSimulate?: boolean } = {}) {
     [
-      seedAgent('Mira', 'AgentDeck', 'working', 12),
-      seedAgent('Kepler', 'Northstar API', 'awaiting_approval', 4),
-      seedAgent('Ada', 'Portfolio', 'completed', 27),
-      seedAgent('Linus', 'Scratchpad', 'idle', 0),
+      seedAgent(
+        'mock-agentdeck-controls',
+        'Rebuild the mounted controls',
+        'AgentDeck',
+        'working',
+        12,
+      ),
+      seedAgent(
+        'mock-northstar-auth',
+        'Fix the auth timeout',
+        'Northstar API',
+        'awaiting_approval',
+        4,
+      ),
+      seedAgent(
+        'mock-portfolio-polish',
+        'Polish the project gallery',
+        'Portfolio',
+        'completed',
+        27,
+      ),
+      seedAgent('mock-scratchpad', 'Explore the workspace', 'Scratchpad', 'idle', 0),
     ].forEach((agent) => this.#agents.set(agent.id, agent));
 
     if (options.autoSimulate !== false) this.#scheduleNextTick();
@@ -166,7 +185,7 @@ export class MockAdapter implements AgentProvider {
       currentOperation: request.initialMessage ? 'Reading the new assignment' : null,
       latestMessage: request.initialMessage ?? 'Ready for a new task.',
       pendingApproval: null,
-      events: [event('system', 'Agent created', `Attached to ${request.projectName}`)],
+      events: [event('system', 'Chat created', `Attached to ${request.projectName}`)],
     };
     this.#agents.set(agent.id, agent);
     this.#emit(agent);

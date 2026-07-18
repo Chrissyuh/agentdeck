@@ -17,10 +17,10 @@ const CONTROL_LABELS: Record<ControlKey, string> = {
   reasoning: 'Reasoning',
 };
 
-const DENSITIES: Array<{ id: DeckDensity; label: string; detail: string }> = [
-  { id: 'roomy', label: 'Roomy', detail: '2 × 3' },
-  { id: 'balanced', label: 'Balanced', detail: '3 × 2' },
-  { id: 'dense', label: 'Dense', detail: '4 × 2' },
+const CHAT_LAYOUTS: Array<{ id: DeckDensity; label: string; detail: string }> = [
+  { id: 'roomy', label: 'List', detail: '1 by 6' },
+  { id: 'balanced', label: 'Grid', detail: '2 by 3' },
+  { id: 'dense', label: 'Wide', detail: '3 by 2' },
 ];
 
 export function CustomizeSheet({
@@ -116,9 +116,9 @@ export function CustomizeSheet({
               </div>
 
               <div className="settings-group">
-                <h3>Agent key layout</h3>
+                <h3>Chat key layout</h3>
                 <div className="density-picker">
-                  {DENSITIES.map((density) => (
+                  {CHAT_LAYOUTS.map((density) => (
                     <button
                       key={density.id}
                       className={preferences.density === density.id ? 'selected' : ''}
@@ -130,7 +130,7 @@ export function CustomizeSheet({
                     </button>
                   ))}
                 </div>
-                <span className="setting-label">Card colors</span>
+                <span className="setting-label">Chat key colors</span>
                 <div className="agent-color-list">
                   {agents.map((agent) => (
                     <div className="agent-color-row" key={agent.id}>
@@ -158,8 +158,8 @@ export function CustomizeSheet({
               </div>
 
               <div className="settings-group">
-                <h3>Agent controls</h3>
-                <p className="setting-note">Choose which controls appear on every agent screen.</p>
+                <h3>Command controls</h3>
+                <p className="setting-note">Choose which controls appear on the mounted surface.</p>
                 <div className="toggle-grid">
                   {(Object.keys(CONTROL_LABELS) as ControlKey[]).map((control) => (
                     <button

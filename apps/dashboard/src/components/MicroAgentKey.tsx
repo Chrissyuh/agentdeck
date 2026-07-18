@@ -1,49 +1,68 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties, type PointerEvent } from 'react';
 import { motion } from 'framer-motion';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Grip, Plus } from 'lucide-react';
+import { Link2, Plus } from 'lucide-react';
 import type { Agent } from '@agentdeck/protocol';
 import { formatElapsed, STATUS_META } from '@agentdeck/shared';
-import { StatusOrb } from './controls';
 import { haptic } from '../hooks';
 
 interface MicroAgentKeyProps {
   agent?: Agent;
   slot: number;
   selected: boolean;
-  arranging: boolean;
   now: number;
   color?: string;
   onSelect(): void;
-  onCreate(): void;
+  onAssign(): void;
+  onReassign(): void;
 }
 
 export function MicroAgentKey({
   agent,
   slot,
   selected,
-  arranging,
   now,
   color,
   onSelect,
-  onCreate,
+  onAssign,
+  onReassign,
 }: MicroAgentKeyProps) {
-  const sortableId = agent?.id ?? `empty-${slot}`;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: sortableId,
-    disabled: !agent || !arranging,
-  });
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+
+  const clearHold = (): void => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  };
+
+  useEffect(
+    () => () => {
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+    },
+    [],
+  );
+
+  const beginHold = (event: PointerEvent<HTMLButtonElement>): void => {
+    if (!agent) return;
+    held.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    holdTimer.current = setTimeout(() => {
+      held.current = true;
+      haptic([8, 20, 12]);
+      onReassign();
+    }, 520);
+  };
 
   if (!agent) {
     return (
       <button
-        className="micro-agent-key empty-key"
-        onClick={onCreate}
-        aria-label={`Create agent in slot ${slot + 1}`}
+        type="button"
+        className="chat-key chat-key-empty"
+        onClick={onAssign}
+        aria-label={`Assign a chat to key ${slot + 1}`}
       >
-        <Plus />
-        <span>Empty slot</span>
+        <span className="chat-key-number">{String(slot + 1).padStart(2, '0')}</span>
+        <Plus aria-hidden="true" />
+        <strong>Map chat</strong>
       </button>
     );
   }
@@ -51,39 +70,43 @@ export function MicroAgentKey({
   const meta = STATUS_META[agent.status];
   const keyColor = color ?? meta.color;
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
     '--key-color': keyColor,
-    '--key-glow': color ? `${color}38` : meta.glow,
-    zIndex: isDragging ? 20 : undefined,
+    '--key-glow': color ? `${color}42` : meta.glow,
   } as CSSProperties;
 
   return (
     <motion.button
-      ref={setNodeRef}
-      layout
       type="button"
-      className={`micro-agent-key ${selected ? 'selected' : ''} ${isDragging ? 'dragging' : ''}`}
-      {...(arranging ? { ...attributes, ...listeners } : {})}
+      className={`chat-key ${selected ? 'selected' : ''}`}
       style={style}
-      whileTap={arranging ? undefined : { scale: 0.975, y: 1 }}
+      whileTap={{ scale: 0.97 }}
+      onPointerDown={beginHold}
+      onPointerUp={clearHold}
+      onPointerCancel={clearHold}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onReassign();
+      }}
       onClick={() => {
+        if (held.current) {
+          held.current = false;
+          return;
+        }
         haptic(8);
         onSelect();
       }}
       aria-pressed={selected}
-      aria-label={`${agent.name}, ${meta.label}, slot ${slot + 1}`}
+      aria-label={`${agent.name}, ${meta.label}, key ${slot + 1}. Hold to remap.`}
     >
-      <span className="micro-key-light">
-        <StatusOrb status={agent.status} />
+      <span className="chat-key-number">{String(slot + 1).padStart(2, '0')}</span>
+      <span className="chat-key-project">{agent.projectName}</span>
+      <strong>{agent.name}</strong>
+      <span className="chat-key-footer">
+        <i />
+        {meta.label}
+        <time>{formatElapsed(agent.startedAt, now)}</time>
       </span>
-      <span className="micro-key-copy">
-        <small>{agent.projectName}</small>
-        <strong>{agent.name}</strong>
-        <span>{meta.label}</span>
-      </span>
-      <time>{formatElapsed(agent.startedAt, now)}</time>
-      {arranging ? <Grip className="micro-key-grip" /> : null}
+      <Link2 className="chat-key-link" aria-hidden="true" />
     </motion.button>
   );
 }

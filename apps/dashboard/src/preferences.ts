@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { isReasoningLevel, type ReasoningLevel } from './reasoning';
 
 export type Theme = 'dark' | 'light';
 export type DeckDensity = 'roomy' | 'balanced' | 'dense';
@@ -11,8 +12,9 @@ export interface LayoutSettings {
   accent: string;
   iconScale: number;
   mountedMode: boolean;
-  order: string[];
+  slots: Array<string | null>;
   agentColors: Record<string, string>;
+  reasoningByAgent: Record<string, ReasoningLevel>;
   hiddenControls: Record<ControlKey, boolean>;
 }
 
@@ -40,32 +42,48 @@ const DEFAULT_CONTROLS: Record<ControlKey, boolean> = {
 const DEFAULTS: Preferences = {
   theme: 'dark',
   density: 'balanced',
-  accent: '#7c8cff',
+  accent: '#d7ff45',
   iconScale: 1,
   mountedMode: true,
-  order: [],
+  slots: [],
   agentColors: {},
+  reasoningByAgent: {},
   hiddenControls: DEFAULT_CONTROLS,
   profiles: [],
 };
 
-const STORAGE_KEY = 'agentdeck.preferences.v1';
+const STORAGE_KEY = 'agentdeck.preferences.v2';
+const LEGACY_STORAGE_KEY = 'agentdeck.preferences.v1';
 
 function loadPreferences(): Preferences {
   if (typeof window === 'undefined') return DEFAULTS;
   try {
     const parsed = JSON.parse(
-      window.localStorage.getItem(STORAGE_KEY) ?? '{}',
-    ) as Partial<Preferences>;
+      window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY) ??
+        '{}',
+    ) as Partial<Preferences> & { order?: unknown };
+    const reasoningByAgent = Object.fromEntries(
+      Object.entries(parsed.reasoningByAgent ?? {}).filter(
+        (entry): entry is [string, ReasoningLevel] => isReasoningLevel(entry[1]),
+      ),
+    );
+    const legacyOrder = Array.isArray(parsed.order)
+      ? parsed.order.filter((item): item is string => typeof item === 'string')
+      : [];
     return {
       ...DEFAULTS,
       ...parsed,
+      accent: parsed.accent === '#7c8cff' ? DEFAULTS.accent : (parsed.accent ?? DEFAULTS.accent),
       hiddenControls: { ...DEFAULT_CONTROLS, ...parsed.hiddenControls },
-      order: Array.isArray(parsed.order)
-        ? parsed.order.filter((item) => typeof item === 'string')
-        : [],
+      slots: Array.isArray(parsed.slots)
+        ? parsed.slots
+            .slice(0, 6)
+            .map((item) => (typeof item === 'string' && item.length > 0 ? item : null))
+        : legacyOrder.slice(0, 6),
       profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
       agentColors: parsed.agentColors ?? {},
+      reasoningByAgent,
     };
   } catch {
     return DEFAULTS;

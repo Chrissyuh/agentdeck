@@ -10,11 +10,11 @@ export function CreateAgentSheet({
   actions,
 }: {
   open: boolean;
-  onClose: () => void;
+  onClose: (result?: 'created') => void;
   actions: AgentDeckActions;
 }) {
-  const [name, setName] = useState('Nova');
-  const [projectName, setProjectName] = useState('New project');
+  const [name, setName] = useState('Investigate the next issue');
+  const [projectName, setProjectName] = useState('Current workspace');
   const [initialMessage, setInitialMessage] = useState(
     'Inspect the workspace and report what you find.',
   );
@@ -28,9 +28,9 @@ export function CreateAgentSheet({
     try {
       await actions.createAgent({ name, projectName, initialMessage });
       haptic([10, 20, 15]);
-      onClose();
+      onClose('created');
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Could not create the agent');
+      setError(nextError instanceof Error ? nextError.message : 'Could not create the chat');
     } finally {
       setBusy(false);
     }
@@ -49,7 +49,7 @@ export function CreateAgentSheet({
             className="bottom-sheet compact-sheet"
             role="dialog"
             aria-modal="true"
-            aria-label="Spawn a mock agent"
+            aria-label="Create a mock chat"
             initial={{ y: '105%' }}
             animate={{ y: 0 }}
             exit={{ y: '105%' }}
@@ -58,16 +58,21 @@ export function CreateAgentSheet({
           >
             <div className="sheet-header">
               <div>
-                <span className="eyebrow">Mock provider</span>
-                <h2>Spawn an agent</h2>
+                <span className="eyebrow">MOCK PROVIDER</span>
+                <h2>Start a new chat</h2>
               </div>
-              <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => onClose()}
+                aria-label="Close"
+              >
                 <X />
               </button>
             </div>
             <div className="form-grid">
               <label>
-                <span>Agent name</span>
+                <span>Chat title</span>
                 <input
                   value={name}
                   maxLength={48}
@@ -96,7 +101,7 @@ export function CreateAgentSheet({
             </label>
             {error ? <p className="form-error">{error}</p> : null}
             <button className="primary-submit" type="submit" disabled={busy}>
-              <Plus /> {busy ? 'Spawning…' : 'Spawn agent'}
+              <Plus /> {busy ? 'Starting...' : 'Start chat'}
             </button>
           </motion.form>
         </motion.div>
