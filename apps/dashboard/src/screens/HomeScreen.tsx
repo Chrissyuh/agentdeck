@@ -10,7 +10,6 @@ import {
   Play,
   Plus,
   Send,
-  Settings2,
   SlidersHorizontal,
   Unlink,
   X,
@@ -24,7 +23,6 @@ import { ChatBindingSheet } from '../components/ChatBindingSheet';
 import { ConsoleButton } from '../components/ConsoleButton';
 import { MicroAgentKey } from '../components/MicroAgentKey';
 import { ReasoningPanel } from '../components/ReasoningPanel';
-import { CustomizeSheet } from '../components/CustomizeSheet';
 import { CreateAgentSheet } from '../components/CreateAgentSheet';
 
 interface HomeScreenProps {
@@ -65,7 +63,6 @@ export function HomeScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
   const [bindingOpen, setBindingOpen] = useState(false);
@@ -399,7 +396,7 @@ export function HomeScreen({
             ) : (
               <motion.div
                 key="chats"
-                className={`chat-key-grid chat-layout-${settings.density}`}
+                className="chat-key-grid chat-layout-balanced"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -411,7 +408,6 @@ export function HomeScreen({
                     slot={index}
                     selected={agent?.id === selectedAgent?.id}
                     now={now}
-                    color={agent ? settings.agentColors[agent.id] : undefined}
                     onSelect={() => agent && setSelectedId(agent.id)}
                     onAssign={() => openBinding(index)}
                     onReassign={() => openBinding(index)}
@@ -545,18 +541,6 @@ export function HomeScreen({
                     <small>Fullscreen and wake while work is active</small>
                   </span>
                 </button>
-                <button
-                  onClick={() => {
-                    setSettingsOpen(true);
-                    setDeckOpen(false);
-                  }}
-                >
-                  <Settings2 />
-                  <span>
-                    <strong>Customize surface</strong>
-                    <small>Layout, colors, size, and visible controls</small>
-                  </span>
-                </button>
                 <button className="is-unpair" onClick={() => actions.unpair()}>
                   <Unlink />
                   <span>
@@ -581,12 +565,6 @@ export function HomeScreen({
           openCreate(slot);
         }}
         onClose={() => setBindingOpen(false)}
-      />
-      <CustomizeSheet
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        agents={snapshot.agents}
-        controller={preferences}
       />
       <CreateAgentSheet
         open={createOpen}

@@ -1,7 +1,112 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Agent, AgentStatus } from '@agentdeck/protocol';
+
+let feedbackAudioContext: AudioContext | null = null;
+let feedbackAudioUnlocked = false;
+let feedbackInteractionUnlocked = false;
+
+if (typeof window !== 'undefined') {
+  const unlockFeedback = (): void => {
+    feedbackInteractionUnlocked = true;
+  };
+  window.addEventListener('pointerdown', unlockFeedback, { once: true, passive: true });
+  window.addEventListener('keydown', unlockFeedback, { once: true });
+}
+
+function vibrate(pattern: number | number[]): boolean {
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return false;
+  return navigator.vibrate(pattern);
+}
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const AudioContextConstructor =
+    window.AudioContext ??
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextConstructor) return null;
+  feedbackAudioContext ??= new AudioContextConstructor();
+  return feedbackAudioContext;
+}
+
+function playTone(
+  context: AudioContext,
+  frequency: number,
+  duration: number,
+  volume: number,
+  offset = 0,
+  type: OscillatorType = 'square',
+): void {
+  const startsAt = context.currentTime + offset;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, startsAt);
+  gain.gain.setValueAtTime(volume, startsAt);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + duration);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(startsAt);
+  oscillator.stop(startsAt + duration);
+}
+
+function playMechanicalClick(): void {
+  const context = getAudioContext();
+  if (!context) return;
+  const play = (): void => {
+    feedbackAudioUnlocked = true;
+    playTone(context, 145, 0.022, 0.035);
+    playTone(context, 980, 0.015, 0.018, 0.004, 'triangle');
+  };
+  if (context.state === 'suspended')
+    void context
+      .resume()
+      .then(play)
+      .catch(() => undefined);
+  else play();
+}
 
 export function haptic(pattern: number | number[] = 12): void {
-  navigator.vibrate?.(pattern);
+  if (!vibrate(pattern)) playMechanicalClick();
+}
+
+function notifyChatUpdate(
+  status: Extract<AgentStatus, 'awaiting_approval' | 'completed' | 'error'>,
+): void {
+  if (!feedbackInteractionUnlocked) return;
+  const vibration =
+    status === 'error' ? [22, 35, 22] : status === 'awaiting_approval' ? [14, 28, 14] : 18;
+  if (vibrate(vibration) || !feedbackAudioUnlocked || !feedbackAudioContext) return;
+
+  const context = feedbackAudioContext;
+  const frequencies: readonly [number, number] =
+    status === 'error' ? [210, 155] : status === 'awaiting_approval' ? [620, 820] : [520, 690];
+  playTone(context, frequencies[0], 0.075, 0.025, 0, 'triangle');
+  playTone(context, frequencies[1], 0.09, 0.025, 0.09, 'triangle');
+}
+
+function isNotifiableStatus(
+  status: AgentStatus,
+): status is Extract<AgentStatus, 'awaiting_approval' | 'completed' | 'error'> {
+  return status === 'awaiting_approval' || status === 'completed' || status === 'error';
+}
+
+export function useChatUpdateFeedback(agents: Agent[]): void {
+  const previousStatuses = useRef<Map<string, AgentStatus> | null>(null);
+
+  useEffect(() => {
+    const nextStatuses = new Map(agents.map((agent) => [agent.id, agent.status]));
+    if (previousStatuses.current) {
+      for (const agent of agents) {
+        if (
+          previousStatuses.current.get(agent.id) !== agent.status &&
+          isNotifiableStatus(agent.status)
+        ) {
+          notifyChatUpdate(agent.status);
+        }
+      }
+    }
+    previousStatuses.current = nextStatuses;
+  }, [agents]);
 }
 
 export function useClock(interval = 1_000): number {

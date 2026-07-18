@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAgentDeck } from '@agentdeck/client';
 import { usePreferences } from './preferences';
-import { useMountedDisplay } from './hooks';
+import { useChatUpdateFeedback, useMountedDisplay } from './hooks';
 import { HomeScreen } from './screens/HomeScreen';
 import { AgentScreen } from './screens/AgentScreen';
 import { PairingScreen } from './screens/PairingScreen';
@@ -11,6 +11,7 @@ import { AmbientScreen } from './screens/AmbientScreen';
 
 export function App() {
   const { snapshot, actions } = useAgentDeck();
+  useChatUpdateFeedback(snapshot.agents);
   const preferences = usePreferences();
   const hasActiveAgent = snapshot.agents.some((agent) =>
     ['thinking', 'working', 'awaiting_approval'].includes(agent.status),

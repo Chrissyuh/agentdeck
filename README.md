@@ -26,7 +26,8 @@ touchscreen hardware can run.
 - Instant skill launcher, local push-to-talk capture where browser security permits it, and hold-drag reasoning control
 - Large approve, reject, interrupt, continue, send, voice, and reasoning controls
 - Hold-to-confirm gestures for dangerous actions and haptics where supported
-- Persistent key bindings, chat-key layouts, colors, icon sizing, themes, and control visibility
+- Persistent key bindings and an opinionated always-dark, high-visibility mounted layout
+- Native haptics where available, with synthesized mechanical clicks and important chat-update cues as a fallback
 - QR or four-digit LAN pairing, automatic reconnect, heartbeat, offline detection, and device unpairing
 - Fullscreen mounted mode with screen wake lock while work is active and ambient sleep when quiet
 - Authoritative local state in the desktop host

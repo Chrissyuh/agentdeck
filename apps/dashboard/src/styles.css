@@ -15,13 +15,13 @@
   --text: #f7f7f5;
   --muted: #92949d;
   --subtle: #676a73;
-  --accent: #7c8cff;
-  --accent-contrast: #080910;
+  --accent: #d7ff45;
+  --accent-contrast: #11140a;
   --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
   --radius-xl: 26px;
   --radius-lg: 20px;
   --radius-md: 15px;
-  --icon-scale: 1;
+  --icon-scale: 2.15;
   font-family:
     Inter,
     -apple-system,
@@ -30,23 +30,6 @@
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-}
-
-:root[data-theme='light'] {
-  color-scheme: light;
-  --bg: #ecebe7;
-  --bg-elevated: #f5f4ef;
-  --surface: rgba(255, 255, 255, 0.92);
-  --surface-strong: #ffffff;
-  --surface-soft: rgba(20, 22, 28, 0.045);
-  --surface-hover: rgba(20, 22, 28, 0.075);
-  --line: rgba(24, 25, 30, 0.1);
-  --line-strong: rgba(24, 25, 30, 0.18);
-  --text: #15161a;
-  --muted: #666971;
-  --subtle: #8e9096;
-  --accent-contrast: #fff;
-  --shadow: 0 24px 60px rgba(41, 38, 31, 0.13);
 }
 
 * {
