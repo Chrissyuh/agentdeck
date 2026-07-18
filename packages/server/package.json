@@ -1,0 +1,37 @@
+{
+  "name": "@agentdeck/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "agentdeck-server": "./dist/standalone.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/standalone.ts --format esm --dts --clean --platform node",
+    "start": "node dist/standalone.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentdeck/protocol": "*",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/ws": "^8.5.13",
+    "tsup": "^8.3.5"
+  }
+}

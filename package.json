@@ -1,0 +1,52 @@
+{
+  "name": "agentdeck",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turn an old phone or tablet into a tactile control surface for local AI coding agents.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chrissyuh/agentdeck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Chrissyuh/agentdeck/issues"
+  },
+  "homepage": "https://github.com/Chrissyuh/agentdeck#readme",
+  "workspaces": [
+    "packages/protocol",
+    "packages/shared",
+    "packages/server",
+    "packages/client",
+    "apps/dashboard",
+    "apps/desktop-host"
+  ],
+  "scripts": {
+    "build": "npm run build:packages && npm run build:apps",
+    "build:packages": "npm run build -w @agentdeck/protocol && npm run build -w @agentdeck/shared && npm run build -w @agentdeck/server && npm run build -w @agentdeck/client",
+    "build:apps": "npm run build -w @agentdeck/dashboard && npm run build -w @agentdeck/desktop-host",
+    "dev": "npm run build:packages && concurrently -k -n DASHBOARD,HOST -c magenta,cyan \"npm run dev -w @agentdeck/dashboard\" \"wait-on tcp:5173 && npm run dev -w @agentdeck/desktop-host\"",
+    "start": "npm run start -w @agentdeck/desktop-host",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "package:desktop": "npm run build && npm run package -w @agentdeck/desktop-host"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10",
+    "wait-on": "^8.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "overrides": {
+    "tsup": {
+      "esbuild": "^0.28.1"
+    }
+  }
+}

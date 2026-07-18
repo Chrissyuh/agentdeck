@@ -1,0 +1,70 @@
+{
+  "name": "@agentdeck/desktop-host",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Electron host and QR pairing service for AgentDeck.",
+  "author": "AgentDeck contributors",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsup src/main.ts --format esm --out-dir dist --clean --platform node --external electron",
+    "dev": "npm run build && cross-env AGENTDECK_DEV_URL=http://localhost:5173 electron .",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit",
+    "package": "electron-builder"
+  },
+  "dependencies": {
+    "@agentdeck/server": "*"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "43.1.1",
+    "electron-builder": "^26.15.3",
+    "tsup": "^8.3.5"
+  },
+  "build": {
+    "appId": "dev.agentdeck.host",
+    "productName": "AgentDeck",
+    "artifactName": "AgentDeck-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "../../release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dashboard/dist",
+        "to": "dashboard"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
