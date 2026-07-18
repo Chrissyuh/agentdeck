@@ -4,7 +4,11 @@ import { Radio, Smartphone, Wifi } from 'lucide-react';
 import type { AgentDeckActions } from '@agentdeck/client';
 
 export function PairingScreen({ actions }: { actions: AgentDeckActions }) {
-  const [serverOrigin, setServerOrigin] = useState('http://192.168.1.10:4317');
+  const [serverOrigin, setServerOrigin] = useState(() =>
+    window.location.protocol.startsWith('http')
+      ? window.location.origin
+      : 'http://192.168.1.10:4317',
+  );
   const [token, setToken] = useState('');
 
   const submit = (event: FormEvent): void => {
@@ -26,9 +30,7 @@ export function PairingScreen({ actions }: { actions: AgentDeckActions }) {
         </div>
         <span className="eyebrow">Local control surface</span>
         <h1>Pair with your desktop</h1>
-        <p>
-          Scan the QR code in the AgentDeck desktop host. This device will reconnect automatically.
-        </p>
+        <p>Scan the QR code or enter the four-digit code shown by the AgentDeck desktop host.</p>
         <div className="pairing-steps">
           <div>
             <Smartphone />
@@ -45,7 +47,7 @@ export function PairingScreen({ actions }: { actions: AgentDeckActions }) {
             </span>
           </div>
         </div>
-        <details>
+        <details open>
           <summary>Pair manually</summary>
           <form onSubmit={submit}>
             <label>
@@ -53,8 +55,16 @@ export function PairingScreen({ actions }: { actions: AgentDeckActions }) {
               <input value={serverOrigin} onChange={(e) => setServerOrigin(e.target.value)} />
             </label>
             <label>
-              <span>Pairing token</span>
-              <input value={token} onChange={(e) => setToken(e.target.value)} required />
+              <span>Four-digit code</span>
+              <input
+                value={token}
+                inputMode="numeric"
+                pattern="[0-9]{4}"
+                maxLength={4}
+                autoComplete="one-time-code"
+                onChange={(event) => setToken(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                required
+              />
             </label>
             <button type="submit">Connect</button>
           </form>

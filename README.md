@@ -27,7 +27,7 @@ touchscreen hardware can run.
 - Large approve, reject, interrupt, continue, send, voice, and reasoning controls
 - Hold-to-confirm gestures for dangerous actions and haptics where supported
 - Persistent key bindings, chat-key layouts, colors, icon sizing, themes, and control visibility
-- Tokenized QR pairing, automatic reconnect, heartbeat, and offline detection
+- QR or four-digit LAN pairing, automatic reconnect, heartbeat, offline detection, and device unpairing
 - Fullscreen mounted mode with screen wake lock while work is active and ambient sleep when quiet
 - Authoritative local state in the desktop host
 - Provider-neutral TypeScript contracts and a realistic `MockAdapter`
@@ -77,10 +77,10 @@ which keeps future integrations isolated from UI code.
 
 ## LAN security model
 
-The host listens on the LAN and generates a cryptographically random token on every launch. The
-token is placed in the QR fragment and required during the WebSocket upgrade. HTTP responses use a
-strict content-security policy and no state-changing HTTP endpoints are exposed. This is intended
-for trusted local networks, not port forwarding or public hosting.
+The host listens on the LAN and generates a four-digit pairing code on every launch. The code is
+placed in the QR fragment and required during the WebSocket upgrade. It is a convenience boundary
+for trusted local networks, not strong authentication. HTTP responses use a strict content-security
+policy and no state-changing HTTP endpoints are exposed. Do not port-forward or publicly host it.
 
 Browsers only grant microphone access in a secure context. On plain LAN HTTP, AgentDeck keeps the
 Voice key active through the MockAdapter's simulated voice-note path. Local recording activates on

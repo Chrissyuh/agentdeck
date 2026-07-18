@@ -12,6 +12,7 @@ import {
   Send,
   Settings2,
   SlidersHorizontal,
+  Unlink,
   X,
 } from 'lucide-react';
 import type { AgentDeckActions, AgentDeckSnapshot } from '@agentdeck/client';
@@ -554,6 +555,13 @@ export function HomeScreen({
                   <span>
                     <strong>Customize surface</strong>
                     <small>Layout, colors, size, and visible controls</small>
+                  </span>
+                </button>
+                <button className="is-unpair" onClick={() => actions.unpair()}>
+                  <Unlink />
+                  <span>
+                    <strong>Unpair this device</strong>
+                    <small>Forget this host and return to pairing</small>
                   </span>
                 </button>
               </div>

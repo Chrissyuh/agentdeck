@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
@@ -67,7 +67,7 @@ export async function createAgentDeckServer(
 ): Promise<RunningAgentDeckServer> {
   const host = options.host ?? '0.0.0.0';
   const desiredPort = options.port ?? DEFAULT_PORT;
-  const token = randomBytes(24).toString('base64url');
+  const token = randomInt(0, 10_000).toString().padStart(4, '0');
   const serverId = randomUUID();
   const provider = options.provider ?? new MockAdapter();
   let revision = 1;

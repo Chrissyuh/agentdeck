@@ -16,6 +16,7 @@ export interface AgentDeckActions {
   sendMessage(agentId: string, message: string): Promise<void>;
   createAgent(agent: CreateAgentRequest): Promise<void>;
   pair(config: PairingConfig): void;
+  unpair(): void;
 }
 
 interface AgentDeckContextValue {
@@ -46,6 +47,7 @@ export function AgentDeckProvider({ children }: PropsWithChildren): React.JSX.El
       sendMessage: (agentId, message) => connection.sendMessage(agentId, message),
       createAgent: (agent) => connection.createAgent(agent),
       pair: (config) => connection.pair(config),
+      unpair: () => connection.unpair(),
     }),
     [connection],
   );

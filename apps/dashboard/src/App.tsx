@@ -6,6 +6,7 @@ import { useMountedDisplay } from './hooks';
 import { HomeScreen } from './screens/HomeScreen';
 import { AgentScreen } from './screens/AgentScreen';
 import { PairingScreen } from './screens/PairingScreen';
+import { ConnectionRecoveryScreen } from './screens/ConnectionRecoveryScreen';
 import { AmbientScreen } from './screens/AmbientScreen';
 
 export function App() {
@@ -39,6 +40,9 @@ export function App() {
   }, [hasActiveAgent, sleepCycle, snapshot.status]);
 
   if (snapshot.status === 'unpaired') return <PairingScreen actions={actions} />;
+  if (snapshot.status !== 'connected' && snapshot.agents.length === 0) {
+    return <ConnectionRecoveryScreen snapshot={snapshot} actions={actions} />;
+  }
   if (ambientSleeping) {
     return (
       <AmbientScreen

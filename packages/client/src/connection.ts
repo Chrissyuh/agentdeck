@@ -115,6 +115,15 @@ export class AgentDeckConnection {
     this.start();
   }
 
+  unpair(): void {
+    this.stop();
+    this.#config = null;
+    this.#reconnectAttempt = 0;
+    if (typeof window !== 'undefined') window.localStorage.removeItem('agentdeck.pairing');
+    this.#snapshot = { ...EMPTY_SNAPSHOT };
+    this.#emit();
+  }
+
   approve(agentId: string): Promise<void> {
     return this.#command({ type: 'approve', requestId: makeRequestId(), agentId });
   }
@@ -225,7 +234,9 @@ export class AgentDeckConnection {
     };
     socket.addEventListener('close', reconnect, { once: true });
     socket.addEventListener('error', () => {
-      this.#setSnapshot({ lastError: 'The desktop host is unreachable.' });
+      this.#setSnapshot({
+        lastError: 'The host is unreachable or the pairing code was rejected.',
+      });
     });
   }
 

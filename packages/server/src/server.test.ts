@@ -13,7 +13,7 @@ describe('AgentDeck server', () => {
     if (running) await running.stop();
   });
 
-  it('authenticates the socket and carries commands through the provider boundary', async () => {
+  it('authenticates the socket with a four-digit code and carries commands through the provider boundary', async () => {
     const provider = new MockAdapter({ autoSimulate: false });
     running = await createAgentDeckServer({
       host: '127.0.0.1',
@@ -21,6 +21,7 @@ describe('AgentDeck server', () => {
       dashboardPath: 'missing-dashboard-for-server-test',
       provider,
     });
+    expect(running.token).toMatch(/^\d{4}$/);
 
     const health = await fetch(`http://127.0.0.1:${running.port}/health`).then((response) =>
       response.json(),
@@ -57,7 +58,7 @@ describe('AgentDeck server', () => {
     expect((await provider.getAgent(workingAgent.id))?.status).toBe('interrupted');
   });
 
-  it('rejects a socket without the rotating pairing token', async () => {
+  it('rejects a socket without the current pairing code', async () => {
     running = await createAgentDeckServer({ host: '127.0.0.1', port: 0 });
     const unauthorized = new WebSocket(`ws://127.0.0.1:${running.port}/ws?token=wrong`);
 

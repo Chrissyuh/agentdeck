@@ -15,9 +15,15 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#039;');
 }
 
-function hostDocument(pairingUrl: string, qrCode: string, localAddress: string): string {
+function hostDocument(
+  pairingUrl: string,
+  qrCode: string,
+  localAddress: string,
+  pairingCode: string,
+): string {
   const safeUrl = escapeHtml(pairingUrl);
   const safeAddress = escapeHtml(localAddress);
+  const safeCode = escapeHtml(pairingCode);
   return `<!doctype html>
   <html lang="en">
     <head>
@@ -44,6 +50,7 @@ function hostDocument(pairingUrl: string, qrCode: string, localAddress: string):
         .qr-shell img { width: calc(100% - 30px); height: calc(100% - 30px); }
         .network { display: flex; align-items: center; gap: 8px; color: #a9abb3; font-size: 11px; }
         .live { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 12px rgba(52,211,153,.7); }
+        .pairing-code { margin: 8px 0 0; color: #d7ff45; font: 800 24px 'SFMono-Regular', Consolas, monospace; letter-spacing: .18em; user-select: text; }
         .url { max-width: 100%; margin: 13px 0 0; overflow: hidden; color: #5f626b; font: 9px 'SFMono-Regular', Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; user-select: text; }
         footer { display: flex; width: 100%; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08); color: #666972; font-size: 9px; }
         footer span:last-child { color: #8e91a0; }
@@ -57,8 +64,9 @@ function hostDocument(pairingUrl: string, qrCode: string, localAddress: string):
         <p class="intro">Open your camera on a device connected to the same Wi-Fi.</p>
         <div class="qr-shell"><img src="${qrCode}" alt="AgentDeck pairing QR code" /></div>
         <div class="network"><span class="live"></span> Host live at ${safeAddress}</div>
+        <p class="pairing-code">${safeCode}</p>
         <p class="url">${safeUrl}</p>
-        <footer><span>No cloud · Token rotates on restart</span><span>Mock provider</span></footer>
+        <footer><span>No cloud · Code rotates on restart</span><span>Mock provider</span></footer>
       </main>
     </body>
   </html>`;
@@ -103,6 +111,7 @@ async function createHostWindow(): Promise<void> {
     pairingUrl,
     qrCode,
     `${localServer.localAddress}:${localServer.port}`,
+    localServer.token,
   );
   await hostWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`);
 }
