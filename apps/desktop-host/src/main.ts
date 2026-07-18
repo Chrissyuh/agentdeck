@@ -1,6 +1,10 @@
 import path from 'node:path';
-import { app, BrowserWindow, shell } from 'electron';
-import { createAgentDeckServer, type RunningAgentDeckServer } from '@agentdeck/server';
+import { app, BrowserWindow, dialog, shell } from 'electron';
+import {
+  createAgentDeckServer,
+  createAgentProvider,
+  type RunningAgentDeckServer,
+} from '@agentdeck/server';
 
 let hostWindow: BrowserWindow | null = null;
 let localServer: RunningAgentDeckServer | null = null;
@@ -20,10 +24,12 @@ function hostDocument(
   qrCode: string,
   localAddress: string,
   pairingCode: string,
+  providerName: string,
 ): string {
   const safeUrl = escapeHtml(pairingUrl);
   const safeAddress = escapeHtml(localAddress);
   const safeCode = escapeHtml(pairingCode);
+  const safeProvider = escapeHtml(providerName);
   return `<!doctype html>
   <html lang="en">
     <head>
@@ -66,7 +72,7 @@ function hostDocument(
         <div class="network"><span class="live"></span> Host live at ${safeAddress}</div>
         <p class="pairing-code">${safeCode}</p>
         <p class="url">${safeUrl}</p>
-        <footer><span>No cloud · Code rotates on restart</span><span>Mock provider</span></footer>
+        <footer><span>LAN-only controller · Code rotates on restart</span><span>${safeProvider} provider</span></footer>
       </main>
     </body>
   </html>`;
@@ -76,7 +82,8 @@ async function createHostWindow(): Promise<void> {
   const dashboardPath = app.isPackaged
     ? path.join(process.resourcesPath, 'dashboard')
     : path.resolve(app.getAppPath(), '../dashboard/dist');
-  localServer = await createAgentDeckServer({ dashboardPath });
+  const provider = await createAgentProvider();
+  localServer = await createAgentDeckServer({ dashboardPath, provider });
 
   const devOrigin = process.env.AGENTDECK_DEV_URL;
   const pairingUrl = localServer.getDashboardUrl(devOrigin);
@@ -112,6 +119,7 @@ async function createHostWindow(): Promise<void> {
     qrCode,
     `${localServer.localAddress}:${localServer.port}`,
     localServer.token,
+    provider.name,
   );
   await hostWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`);
 }
@@ -137,6 +145,10 @@ if (!hasLock) {
     })
     .catch((error: unknown) => {
       console.error('AgentDeck failed to start', error);
+      dialog.showErrorBox(
+        'AgentDeck could not connect to Codex',
+        `${error instanceof Error ? error.message : 'Unknown provider error'}\n\nInstall or update the Codex CLI, run codex login, then reopen AgentDeck. Set AGENTDECK_PROVIDER=mock only when you explicitly want the simulator.`,
+      );
       app.quit();
     });
 

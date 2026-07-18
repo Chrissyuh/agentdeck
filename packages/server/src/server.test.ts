@@ -26,7 +26,12 @@ describe('AgentDeck server', () => {
     const health = await fetch(`http://127.0.0.1:${running.port}/health`).then((response) =>
       response.json(),
     );
-    expect(health).toMatchObject({ ok: true, service: 'agentdeck', serverId: running.serverId });
+    expect(health).toMatchObject({
+      ok: true,
+      service: 'agentdeck',
+      serverId: running.serverId,
+      provider: 'Mock',
+    });
 
     const messages: ServerMessage[] = [];
     socket = new WebSocket(`ws://127.0.0.1:${running.port}/ws?token=${running.token}`);
@@ -39,6 +44,9 @@ describe('AgentDeck server', () => {
     await vi.waitFor(() =>
       expect(messages.some((message) => message.type === 'snapshot')).toBe(true),
     );
+    expect(messages.find((message) => message.type === 'snapshot')).toMatchObject({
+      providerName: 'Mock',
+    });
     const workingAgent = (await provider.listAgents()).find((agent) => agent.status === 'working');
     expect(workingAgent).toBeDefined();
     if (!workingAgent) return;

@@ -19,4 +19,16 @@ describe('AgentDeck protocol', () => {
       serverTime: 42,
     });
   });
+
+  it('carries provider-native reasoning effort with a direction', () => {
+    expect(
+      clientMessageSchema.parse({
+        type: 'send_message',
+        requestId: 'r2',
+        agentId: 'a1',
+        message: 'Handle the difficult edge case.',
+        reasoningEffort: 'ultra',
+      }),
+    ).toMatchObject({ reasoningEffort: 'ultra' });
+  });
 });

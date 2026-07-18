@@ -9,6 +9,7 @@ interface ChatBindingSheetProps {
   open: boolean;
   initialSlot: number;
   agents: Agent[];
+  providerName: string | null;
   slots: Array<string | null>;
   onChange(slots: Array<string | null>): void;
   onCreate(slot: number): void;
@@ -19,12 +20,14 @@ export function ChatBindingSheet({
   open,
   initialSlot,
   agents,
+  providerName,
   slots,
   onChange,
   onCreate,
   onClose,
 }: ChatBindingSheetProps) {
   const [activeSlot, setActiveSlot] = useState(initialSlot);
+  const providerLabel = providerName ?? 'Agent';
 
   useEffect(() => {
     if (open) setActiveSlot(initialSlot);
@@ -73,7 +76,7 @@ export function ChatBindingSheet({
               <div>
                 <span>BUTTON MAP</span>
                 <h2>Tie chats to keys</h2>
-                <p>Choose a key, then choose the Codex chat it should open.</p>
+                <p>Choose a key, then choose the {providerLabel} task it should control.</p>
               </div>
               <button onClick={onClose} aria-label="Close button mapping">
                 <X />
@@ -102,7 +105,7 @@ export function ChatBindingSheet({
                 <div className="binding-list-label">
                   <span>AVAILABLE CHATS</span>
                   <button onClick={() => onCreate(activeSlot)}>
-                    <Plus /> New mock chat
+                    <Plus /> New {providerLabel} task
                   </button>
                 </div>
                 {agents.map((agent) => {

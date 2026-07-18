@@ -82,6 +82,7 @@ function seedAgent(
 }
 
 export class MockAdapter implements AgentProvider {
+  readonly name = 'Mock';
   readonly #agents = new Map<string, Agent>();
   readonly #listeners = new Set<AgentProviderListener>();
   #timer: NodeJS.Timeout | undefined;

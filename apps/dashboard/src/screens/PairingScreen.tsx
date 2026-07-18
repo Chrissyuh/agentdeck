@@ -43,7 +43,7 @@ export function PairingScreen({ actions }: { actions: AgentDeckActions }) {
             <Wifi />
             <span>
               <strong>Use the same Wi-Fi</strong>
-              <small>No cloud or account required</small>
+              <small>No separate AgentDeck account</small>
             </span>
           </div>
         </div>

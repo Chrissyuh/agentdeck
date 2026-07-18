@@ -12,6 +12,23 @@ export const agentStatusSchema = z.enum([
 
 export type AgentStatus = z.infer<typeof agentStatusSchema>;
 
+export const reasoningEffortSchema = z.enum([
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'ultra',
+]);
+
+export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>;
+
+export interface AgentMessageOptions {
+  reasoningEffort?: ReasoningEffort;
+}
+
 export const agentEventSchema = z.object({
   id: z.string().min(1),
   timestamp: z.string().datetime(),
@@ -50,7 +67,7 @@ export type Agent = z.infer<typeof agentSchema>;
 
 export const createAgentRequestSchema = z.object({
   name: z.string().trim().min(1).max(48),
-  projectName: z.string().trim().min(1).max(80),
+  projectName: z.string().trim().min(1).max(260),
   initialMessage: z.string().trim().max(500).optional(),
 });
 
@@ -68,6 +85,7 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('send_message'),
     agentId: z.string().min(1),
     message: z.string().trim().min(1).max(4000),
+    reasoningEffort: reasoningEffortSchema.optional(),
   }),
   commandBaseSchema.extend({
     type: z.literal('create_agent'),
@@ -83,6 +101,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('snapshot'),
     revision: z.number().int().nonnegative(),
     serverId: z.string().min(1),
+    providerName: z.string().min(1),
     agents: z.array(agentSchema),
   }),
   z.object({

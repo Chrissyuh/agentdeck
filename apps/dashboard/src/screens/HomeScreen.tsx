@@ -129,7 +129,9 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
   const sendDirection = async (text: string): Promise<void> => {
     const clean = text.trim();
     if (!selectedAgent || !clean) return;
-    await run('Direction sent', () => actions.sendMessage(selectedAgent.id, clean));
+    await run('Direction sent', () =>
+      actions.sendMessage(selectedAgent.id, clean, { reasoningEffort: reasoningLevel }),
+    );
     setMessage('');
     setComposerOpen(false);
   };
@@ -141,7 +143,9 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
 
   const voice = useVoiceInput((transcript) => {
     if (selectedAgent)
-      void run('Voice direction sent', () => actions.sendMessage(selectedAgent.id, transcript));
+      void run('Voice direction sent', () =>
+        actions.sendMessage(selectedAgent.id, transcript, { reasoningEffort: reasoningLevel }),
+      );
   });
 
   const openBinding = (slot = Math.max(0, selectedSlot)): void => {
@@ -177,13 +181,7 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
     patch({
       reasoningByAgent: { ...settings.reasoningByAgent, [selectedAgent.id]: level },
     });
-    const label = REASONING_META[level].label;
-    void run(`${label} reasoning set`, () =>
-      actions.sendMessage(
-        selectedAgent.id,
-        `Use ${level} reasoning effort for the next operation.`,
-      ),
-    );
+    haptic([6, 12, 8]);
   };
 
   const beginReasoning = (event: PointerEvent<HTMLButtonElement>): void => {
@@ -330,13 +328,18 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
                 active={voice.listening}
                 disabled={!selectedAgent}
                 onTrigger={() => {
-                  if (!voice.start() && selectedAgent)
+                  if (voice.start() || !selectedAgent) return;
+                  if (snapshot.providerName === 'Mock') {
                     void run('Voice note sent (mock)', () =>
                       actions.sendMessage(
                         selectedAgent.id,
                         'Voice direction (simulated by the local mock provider).',
+                        { reasoningEffort: reasoningLevel },
                       ),
                     );
+                  } else {
+                    setFeedback('Voice needs HTTPS or localhost microphone access');
+                  }
                 }}
               />
             ) : null}
@@ -531,7 +534,9 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
                     onClick={() => {
                       if (selectedAgent)
                         void run(`${skill.name} launched`, () =>
-                          actions.sendMessage(selectedAgent.id, skill.detail),
+                          actions.sendMessage(selectedAgent.id, skill.detail, {
+                            reasoningEffort: reasoningLevel,
+                          }),
                         );
                       setSkillsOpen(false);
                     }}
@@ -613,6 +618,7 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
         open={bindingOpen}
         initialSlot={bindingSlot}
         agents={snapshot.agents}
+        providerName={snapshot.providerName}
         slots={slots}
         onChange={(next) => patch({ slots: next })}
         onCreate={(slot) => {
@@ -623,6 +629,8 @@ export function HomeScreen({ snapshot, actions, preferences, mountedDisplay }: H
       />
       <CreateAgentSheet
         open={createOpen}
+        providerName={snapshot.providerName}
+        defaultWorkspace={selectedAgent?.projectName}
         onClose={(result) => {
           setCreateOpen(false);
           if (result !== 'created') setCreateTarget(null);

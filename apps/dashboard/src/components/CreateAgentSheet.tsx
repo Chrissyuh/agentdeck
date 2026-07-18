@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, X } from 'lucide-react';
 import type { AgentDeckActions } from '@agentdeck/client';
@@ -6,20 +6,28 @@ import { haptic } from '../hooks';
 
 export function CreateAgentSheet({
   open,
+  providerName,
+  defaultWorkspace,
   onClose,
   actions,
 }: {
   open: boolean;
+  providerName: string | null;
+  defaultWorkspace?: string;
   onClose: (result?: 'created') => void;
   actions: AgentDeckActions;
 }) {
   const [name, setName] = useState('Investigate the next issue');
-  const [projectName, setProjectName] = useState('Current workspace');
+  const [projectName, setProjectName] = useState('');
   const [initialMessage, setInitialMessage] = useState(
     'Inspect the workspace and report what you find.',
   );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open && !projectName && defaultWorkspace) setProjectName(defaultWorkspace);
+  }, [defaultWorkspace, open, projectName]);
 
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
@@ -49,7 +57,7 @@ export function CreateAgentSheet({
             className="bottom-sheet compact-sheet"
             role="dialog"
             aria-modal="true"
-            aria-label="Create a mock chat"
+            aria-label="Create an agent task"
             initial={{ y: '105%' }}
             animate={{ y: 0 }}
             exit={{ y: '105%' }}
@@ -58,7 +66,7 @@ export function CreateAgentSheet({
           >
             <div className="sheet-header">
               <div>
-                <span className="eyebrow">MOCK PROVIDER</span>
+                <span className="eyebrow">{(providerName ?? 'AGENT').toUpperCase()} PROVIDER</span>
                 <h2>Start a new chat</h2>
               </div>
               <button
@@ -81,10 +89,11 @@ export function CreateAgentSheet({
                 />
               </label>
               <label>
-                <span>Project</span>
+                <span>Workspace or project</span>
                 <input
                   value={projectName}
-                  maxLength={80}
+                  maxLength={260}
+                  placeholder="Existing project or C:\\path\\to\\repo"
                   onChange={(event) => setProjectName(event.target.value)}
                   required
                 />

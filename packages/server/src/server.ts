@@ -85,7 +85,7 @@ export async function createAgentDeckServer(
   });
 
   app.get('/health', (_request, response) => {
-    response.json({ ok: true, service: 'agentdeck', serverId });
+    response.json({ ok: true, service: 'agentdeck', serverId, provider: provider.name });
   });
 
   const dashboardPath = options.dashboardPath
@@ -150,7 +150,9 @@ export async function createAgentDeckServer(
     });
 
     const agents = await provider.listAgents();
-    socket.send(encodeMessage({ type: 'snapshot', revision, serverId, agents }));
+    socket.send(
+      encodeMessage({ type: 'snapshot', revision, serverId, providerName: provider.name, agents }),
+    );
   });
 
   async function handleClientMessage(socket: LiveSocket, raw: string): Promise<void> {
@@ -181,7 +183,9 @@ export async function createAgentDeckServer(
           await provider.interrupt(message.agentId);
           break;
         case 'send_message':
-          await provider.sendMessage(message.agentId, message.message);
+          await provider.sendMessage(message.agentId, message.message, {
+            ...(message.reasoningEffort ? { reasoningEffort: message.reasoningEffort } : {}),
+          });
           break;
         case 'create_agent':
           await provider.createAgent(message.agent);
@@ -254,7 +258,7 @@ export async function createAgentDeckServer(
     stop: async () => {
       clearInterval(heartbeatTimer);
       unsubscribe();
-      if (provider instanceof MockAdapter) provider.dispose();
+      await provider.dispose?.();
       sockets.forEach((socket) => socket.close(1001, 'Host shutting down'));
       await new Promise<void>((resolve) => httpServer.close(() => resolve()));
       webSocketServer.close();

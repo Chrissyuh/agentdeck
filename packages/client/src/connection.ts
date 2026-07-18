@@ -1,4 +1,9 @@
-import type { Agent, ClientMessage, CreateAgentRequest } from '@agentdeck/protocol';
+import type {
+  Agent,
+  AgentMessageOptions,
+  ClientMessage,
+  CreateAgentRequest,
+} from '@agentdeck/protocol';
 import { encodeMessage, parseServerMessage } from '@agentdeck/protocol';
 import { makeRequestId } from '@agentdeck/shared';
 
@@ -8,6 +13,7 @@ export interface AgentDeckSnapshot {
   agents: Agent[];
   revision: number;
   serverId: string | null;
+  providerName: string | null;
   status: ConnectionStatus;
   latencyMs: number | null;
   lastError: string | null;
@@ -24,6 +30,7 @@ const EMPTY_SNAPSHOT: AgentDeckSnapshot = {
   agents: [],
   revision: 0,
   serverId: null,
+  providerName: null,
   status: 'unpaired',
   latencyMs: null,
   lastError: null,
@@ -136,8 +143,14 @@ export class AgentDeckConnection {
     return this.#command({ type: 'interrupt', requestId: makeRequestId(), agentId });
   }
 
-  sendMessage(agentId: string, message: string): Promise<void> {
-    return this.#command({ type: 'send_message', requestId: makeRequestId(), agentId, message });
+  sendMessage(agentId: string, message: string, options: AgentMessageOptions = {}): Promise<void> {
+    return this.#command({
+      type: 'send_message',
+      requestId: makeRequestId(),
+      agentId,
+      message,
+      ...options,
+    });
   }
 
   createAgent(agent: CreateAgentRequest): Promise<void> {
@@ -175,6 +188,7 @@ export class AgentDeckConnection {
             agents: message.agents,
             revision: message.revision,
             serverId: message.serverId,
+            providerName: message.providerName,
             status: 'connected',
           };
           this.#emit();

@@ -6,14 +6,14 @@ import {
   useSyncExternalStore,
   type PropsWithChildren,
 } from 'react';
-import type { CreateAgentRequest } from '@agentdeck/protocol';
+import type { AgentMessageOptions, CreateAgentRequest } from '@agentdeck/protocol';
 import { AgentDeckConnection, type AgentDeckSnapshot, type PairingConfig } from './connection';
 
 export interface AgentDeckActions {
   approve(agentId: string): Promise<void>;
   reject(agentId: string): Promise<void>;
   interrupt(agentId: string): Promise<void>;
-  sendMessage(agentId: string, message: string): Promise<void>;
+  sendMessage(agentId: string, message: string, options?: AgentMessageOptions): Promise<void>;
   createAgent(agent: CreateAgentRequest): Promise<void>;
   pair(config: PairingConfig): void;
   unpair(): void;
@@ -44,7 +44,7 @@ export function AgentDeckProvider({ children }: PropsWithChildren): React.JSX.El
       approve: (agentId) => connection.approve(agentId),
       reject: (agentId) => connection.reject(agentId),
       interrupt: (agentId) => connection.interrupt(agentId),
-      sendMessage: (agentId, message) => connection.sendMessage(agentId, message),
+      sendMessage: (agentId, message, options) => connection.sendMessage(agentId, message, options),
       createAgent: (agent) => connection.createAgent(agent),
       pair: (config) => connection.pair(config),
       unpair: () => connection.unpair(),

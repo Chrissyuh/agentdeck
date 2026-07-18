@@ -1,18 +1,22 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createAgentProvider } from './provider-factory';
 import { createAgentDeckServer } from './server';
 
 const portValue = Number(process.env.AGENTDECK_PORT ?? 4317);
-const dashboardPath = path.resolve(
-  process.env.AGENTDECK_DASHBOARD_PATH ?? '../../apps/dashboard/dist',
-);
+const dashboardPath = process.env.AGENTDECK_DASHBOARD_PATH
+  ? path.resolve(process.env.AGENTDECK_DASHBOARD_PATH)
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../apps/dashboard/dist');
 
-const server = await createAgentDeckServer({ port: portValue, dashboardPath });
+const provider = await createAgentProvider();
+const server = await createAgentDeckServer({ port: portValue, dashboardPath, provider });
 
 process.stdout.write(
   `${JSON.stringify({
     service: 'AgentDeck',
     address: `${server.localAddress}:${server.port}`,
     pairingUrl: server.getDashboardUrl(),
+    provider: provider.name,
   })}\n`,
 );
 
